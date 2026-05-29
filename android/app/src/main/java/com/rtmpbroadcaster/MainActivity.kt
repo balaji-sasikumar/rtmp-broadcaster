@@ -8,7 +8,7 @@ import com.facebook.react.defaults.DefaultReactActivityDelegate
 class MainActivity : ReactActivity() {
 
     /** Returns the name of the main component registered from JavaScript. */
-    override fun getMainComponentName(): String = "RTMPBroadcaster"
+    override fun getMainComponentName(): String = "RTMPulse"
 
     override fun createReactActivityDelegate(): ReactActivityDelegate =
         DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)

@@ -55,24 +55,6 @@ export default function App(): React.JSX.Element {
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
 
-  // The encoder always outputs 16:9 (1280×720 landscape). Constrain the
-  // preview to the same ratio so it never stretches.
-  const previewStyle = React.useMemo(() => {
-    if (isLandscape) {
-      // Fill the whole screen — it already matches 16:9 landscape.
-      return StyleSheet.absoluteFill;
-    }
-    // Portrait: fit 16:9 within the screen width, centre vertically.
-    const previewH = width * (9 / 16);
-    return {
-      position: "absolute" as const,
-      width,
-      height: previewH,
-      top: (height - previewH) / 2,
-      left: 0,
-    };
-  }, [isLandscape, width, height]);
-
   // ── Permissions ─────────────────────────────────────────────────────────────
   useEffect(() => {
     requestPermissions();
@@ -282,10 +264,10 @@ export default function App(): React.JSX.Element {
         backgroundColor="transparent"
       />
 
-      {/* Camera preview — 16:9 aspect-ratio locked to prevent stretching */}
+      {/* Camera preview — fills screen in all orientations */}
       <RTMPPublisher
         ref={publisherRef}
-        style={previewStyle}
+        style={StyleSheet.absoluteFill}
         streamURL={rtmpUrl}
         streamName={streamKey}
         onConnectionStarted={() => setConnectionStatus("connecting")}
