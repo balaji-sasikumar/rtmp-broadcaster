@@ -1,5 +1,5 @@
 {
-  "name": "RTMPBroadcaster",
+  "name": "RTMPulse",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -27,6 +27,7 @@
     "eslint": "^8.19.0",
     "patch-package": "^8.0.1",
     "prettier": "2.8.8",
+    "sharp": "^0.34.5",
     "typescript": "5.0.4"
   },
   "engines": {

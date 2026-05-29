@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Background: deep dark with slight red tint -->
+  <rect width="1024" height="1024" rx="224" fill="#0f0f12"/>
+
+  <!-- Outer glow ring (broadcast rings) -->
+  <circle cx="512" cy="430" r="300" fill="none" stroke="#ff3b30" stroke-width="18" opacity="0.18"/>
+  <circle cx="512" cy="430" r="220" fill="none" stroke="#ff3b30" stroke-width="22" opacity="0.32"/>
+  <circle cx="512" cy="430" r="140" fill="none" stroke="#ff3b30" stroke-width="26" opacity="0.55"/>
+
+  <!-- Center record button -->
+  <circle cx="512" cy="430" r="88" fill="#ff3b30"/>
+  <!-- Inner white dot -->
+  <circle cx="512" cy="430" r="38" fill="#ffffff"/>
+
+  <!-- RTMPulse label pill -->
+  <rect x="262" y="618" width="500" height="80" rx="40" fill="#ff3b30"/>
+  <text x="512" y="674" font-family="Arial, Helvetica, sans-serif" font-size="48" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="2">RTMPulse</text>
+</svg>
