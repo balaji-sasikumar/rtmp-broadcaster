@@ -1,0 +1,55 @@
+apply plugin: "com.android.application"
+apply plugin: "org.jetbrains.kotlin.android"
+apply plugin: "com.facebook.react"
+
+/**
+ * React Native Gradle Plugin manages the JS bundling and native code compilation.
+ * No additional configuration is needed for auto-linking.
+ */
+react {
+    /* hermesEnabled = true is the default */
+}
+
+def enableProguardInReleaseBuilds = false
+
+android {
+    ndkVersion       rootProject.ext.ndkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
+    compileSdk       rootProject.ext.compileSdkVersion
+
+    namespace "com.rtmpbroadcaster"
+
+    defaultConfig {
+        applicationId "com.rtmpbroadcaster"
+        minSdkVersion  rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0"
+    }
+
+    signingConfigs {
+        debug {
+            storeFile   file('debug.keystore')
+            storePassword 'android'
+            keyAlias    'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            signingConfig signingConfigs.debug
+            minifyEnabled enableProguardInReleaseBuilds
+            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+        }
+    }
+}
+
+dependencies {
+    // Versions are managed by the React Native Gradle Plugin
+    implementation("com.facebook.react:react-android")
+    implementation("com.facebook.react:hermes-android")
+}
