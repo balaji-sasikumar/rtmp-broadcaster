@@ -11,6 +11,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import RTMPPublisher, {
@@ -38,6 +39,7 @@ const STATUS_LABEL: Record<ConnectionStatus, string> = {
 
 export default function App(): React.JSX.Element {
   const publisherRef = useRef<RTMPPublisherRefProps>(null);
+  const streamKeyInputRef = useRef<TextInput>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   const [rtmpUrl, setRtmpUrl] = useState("rtmp://");
@@ -49,6 +51,27 @@ export default function App(): React.JSX.Element {
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("idle");
   const [errorMessage, setErrorMessage] = useState("");
+
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+
+  // The encoder always outputs 16:9 (1280×720 landscape). Constrain the
+  // preview to the same ratio so it never stretches.
+  const previewStyle = React.useMemo(() => {
+    if (isLandscape) {
+      // Fill the whole screen — it already matches 16:9 landscape.
+      return StyleSheet.absoluteFill;
+    }
+    // Portrait: fit 16:9 within the screen width, centre vertically.
+    const previewH = width * (9 / 16);
+    return {
+      position: "absolute" as const,
+      width,
+      height: previewH,
+      top: (height - previewH) / 2,
+      left: 0,
+    };
+  }, [isLandscape, width, height]);
 
   // ── Permissions ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -259,10 +282,10 @@ export default function App(): React.JSX.Element {
         backgroundColor="transparent"
       />
 
-      {/* Full-screen camera preview */}
+      {/* Camera preview — 16:9 aspect-ratio locked to prevent stretching */}
       <RTMPPublisher
         ref={publisherRef}
-        style={StyleSheet.absoluteFill}
+        style={previewStyle}
         streamURL={rtmpUrl}
         streamName={streamKey}
         onConnectionStarted={() => setConnectionStatus("connecting")}
@@ -317,7 +340,10 @@ export default function App(): React.JSX.Element {
 
       {/* Bottom overlay */}
       <KeyboardAvoidingView
-        style={styles.bottomOverlay}
+        style={[
+          styles.bottomOverlay,
+          isLandscape && styles.bottomOverlayLandscape,
+        ]}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         {/* Connection status */}
@@ -337,43 +363,60 @@ export default function App(): React.JSX.Element {
           <Text style={styles.errorText}>{errorMessage}</Text>
         ) : null}
 
-        {/* RTMP URL input */}
-        <TextInput
-          style={[styles.input, isStreaming && styles.inputDisabled]}
-          placeholder="Base URL — rtmp://server:port/app"
-          placeholderTextColor="#888"
-          value={rtmpUrl}
-          onChangeText={handleRtmpUrlChange}
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="url"
-          editable={!isStreaming}
-          accessibilityLabel="RTMP base URL"
-        />
-        <Text style={styles.inputHint}>
-          Paste the full URL — stream key will be split out automatically
-        </Text>
+        {/* Inputs — side-by-side in landscape */}
+        <View style={isLandscape ? styles.inputsRow : undefined}>
+          <View style={isLandscape ? styles.inputsColLandscape : undefined}>
+            <TextInput
+              style={[styles.input, isStreaming && styles.inputDisabled]}
+              placeholder="Base URL — rtmp://server:port/app"
+              placeholderTextColor="#888"
+              value={rtmpUrl}
+              onChangeText={handleRtmpUrlChange}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              editable={!isStreaming}
+              returnKeyType="next"
+              onSubmitEditing={() => streamKeyInputRef.current?.focus()}
+              blurOnSubmit={false}
+              accessibilityLabel="RTMP base URL"
+            />
+            {!isLandscape && (
+              <Text style={styles.inputHint}>
+                Paste the full URL — stream key will be split out automatically
+              </Text>
+            )}
+          </View>
 
-        {/* Stream key input */}
-        <TextInput
-          style={[styles.input, isStreaming && styles.inputDisabled]}
-          placeholder="Stream Key"
-          placeholderTextColor="#888"
-          value={streamKey}
-          onChangeText={(v) => {
-            setStreamKey(v);
-            setKeyAutoFilled(false);
-          }}
-          autoCapitalize="none"
-          autoCorrect={false}
-          secureTextEntry
-          editable={!isStreaming}
-          accessibilityLabel="Stream key"
-        />
+          <View style={isLandscape ? styles.inputsColLandscape : undefined}>
+            <TextInput
+              ref={streamKeyInputRef}
+              style={[styles.input, isStreaming && styles.inputDisabled]}
+              placeholder="Stream Key"
+              placeholderTextColor="#888"
+              value={streamKey}
+              onChangeText={(v) => {
+                setStreamKey(v);
+                setKeyAutoFilled(false);
+              }}
+              autoCapitalize="none"
+              autoCorrect={false}
+              secureTextEntry
+              editable={!isStreaming}
+              returnKeyType="go"
+              onSubmitEditing={isStreaming ? undefined : handleGoLive}
+              accessibilityLabel="Stream key"
+            />
+          </View>
+        </View>
 
         {/* Go Live / Stop button */}
         <TouchableOpacity
-          style={[styles.liveButton, isStreaming && styles.stopButton]}
+          style={[
+            styles.liveButton,
+            isStreaming && styles.stopButton,
+            isLandscape && styles.liveButtonLandscape,
+          ]}
           onPress={isStreaming ? handleStop : handleGoLive}
           activeOpacity={0.8}
           accessibilityRole="button"
@@ -522,5 +565,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     letterSpacing: 0.4,
+  },
+
+  // ── Landscape overrides ──────────────────────────────────────────────────────
+  bottomOverlayLandscape: {
+    paddingTop: 8,
+    paddingBottom: 10,
+    gap: 6,
+  },
+  inputsRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  inputsColLandscape: {
+    flex: 1,
+  },
+  liveButtonLandscape: {
+    paddingVertical: 10,
   },
 });

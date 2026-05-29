@@ -1,0 +1,17 @@
+diff --git a/node_modules/react-native-rtmp-publisher/android/src/main/java/com/reactnativertmppublisher/modules/Publisher.java b/node_modules/react-native-rtmp-publisher/android/src/main/java/com/reactnativertmppublisher/modules/Publisher.java
+index 0ed30ca..c6183a2 100644
+--- a/node_modules/react-native-rtmp-publisher/android/src/main/java/com/reactnativertmppublisher/modules/Publisher.java
++++ b/node_modules/react-native-rtmp-publisher/android/src/main/java/com/reactnativertmppublisher/modules/Publisher.java
+@@ -178,7 +178,11 @@ public class Publisher {
+   public void startStream() {
+     try {
+       boolean isAudioPrepared = _rtmpCamera.prepareAudio(MediaRecorder.AudioSource.DEFAULT, 128 * 1024, 44100, true, false, false);
+-      boolean isVideoPrepared = _rtmpCamera.prepareVideo(1280 , 720, 3000 * 1024);
++      // Pass rotation=0 to force landscape (1280x720) encoding regardless of
++      // how the device is physically oriented. The default 3-arg overload uses
++      // CameraHelper.getCameraOrientation() which returns 90 in portrait mode,
++      // swapping the dimensions to 720x1280 on the server side.
++      boolean isVideoPrepared = _rtmpCamera.prepareVideo(1280, 720, 30, 3000 * 1024, 2, 0);
+ 
+       if (!isAudioPrepared || !isVideoPrepared || _streamName == null || _streamUrl == null) {
+         return;

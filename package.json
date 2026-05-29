@@ -7,7 +7,8 @@
     "ios": "react-native run-ios",
     "start": "react-native start",
     "lint": "eslint .",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "react": "18.2.0",
@@ -24,6 +25,7 @@
     "@react-native/typescript-config": "0.73.1",
     "@types/react": "^18.2.6",
     "eslint": "^8.19.0",
+    "patch-package": "^8.0.1",
     "prettier": "2.8.8",
     "typescript": "5.0.4"
   },
