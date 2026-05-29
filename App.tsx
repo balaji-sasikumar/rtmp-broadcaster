@@ -42,6 +42,8 @@ export default function App(): React.JSX.Element {
 
   const [rtmpUrl, setRtmpUrl] = useState("rtmp://");
   const [streamKey, setStreamKey] = useState("");
+  // Tracks whether the key was auto-filled from a pasted full URL
+  const [keyAutoFilled, setKeyAutoFilled] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [connectionStatus, setConnectionStatus] =
@@ -100,6 +102,45 @@ export default function App(): React.JSX.Element {
     if (keyMatch?.[1]) setStreamKey(decodeURIComponent(keyMatch[1]));
   };
 
+  /**
+   * Smart RTMP URL handler.
+   *
+   * Many server dashboards show the full publish URL with the stream key
+   * already embedded as the last path segment, e.g.:
+   *   rtmp://server:1935/live/my-stream-key
+   *
+   * react-native-rtmp-publisher builds the final URL as streamURL/streamName,
+   * so we must NOT put the key inside streamURL — it would be doubled.
+   *
+   * When the user pastes a URL whose last path segment looks like a stream key
+   * (UUID, long alphanumeric token, etc.) AND the key field is currently empty
+   * or was previously auto-filled, this function splits it automatically.
+   */
+  const handleRtmpUrlChange = (value: string) => {
+    // Only auto-split when not streaming and the value looks like a full URL
+    if (!isStreaming) {
+      const stripped = value.trim();
+      // Match: rtmp(s)://host[:port]/app/streamkey  — key must be ≥8 chars
+      const match = stripped.match(
+        /^(rtmps?:\/\/[^/]+\/[^/]+)\/([A-Za-z0-9\-_]{8,})$/,
+      );
+      if (match) {
+        const baseUrl = match[1];
+        const parsedKey = match[2];
+        setRtmpUrl(baseUrl);
+        // Only auto-fill the key if it's blank or was previously auto-filled
+        if (!streamKey || keyAutoFilled) {
+          setStreamKey(parsedKey);
+          setKeyAutoFilled(true);
+        }
+        return;
+      }
+    }
+    setRtmpUrl(value);
+    // If the user manually clears/changes the URL, reset the auto-fill flag
+    if (keyAutoFilled) setKeyAutoFilled(false);
+  };
+
   // ── Pulsing LIVE badge animation ────────────────────────────────────────────
   useEffect(() => {
     if (!isStreaming) {
@@ -127,11 +168,47 @@ export default function App(): React.JSX.Element {
   // ── Stream actions ──────────────────────────────────────────────────────────
   const handleGoLive = async () => {
     if (!rtmpUrl || rtmpUrl === "rtmp://" || !rtmpUrl.startsWith("rtmp")) {
-      Alert.alert("Invalid RTMP URL", "Enter a valid rtmp:// URL.");
+      Alert.alert(
+        "Invalid RTMP URL",
+        "Enter a valid rtmp:// base URL (without the stream key).",
+      );
       return;
     }
     if (!streamKey.trim()) {
       Alert.alert("Missing stream key", "Please enter your stream key.");
+      return;
+    }
+    // Guard: if the URL ends with the stream key, the user hasn't split it.
+    // This produces a doubled path on the server and silently fails.
+    const trailingKey = rtmpUrl.endsWith("/" + streamKey.trim());
+    if (trailingKey) {
+      Alert.alert(
+        "URL contains stream key",
+        `It looks like your RTMP URL already ends with the stream key.\n\nBase URL:\n${rtmpUrl.slice(
+          0,
+          rtmpUrl.lastIndexOf("/"),
+        )}\n\nStream key:\n${streamKey.trim()}\n\nShall I fix this automatically?`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Fix & Go Live",
+            onPress: () => {
+              const fixedUrl = rtmpUrl.slice(0, rtmpUrl.lastIndexOf("/"));
+              setRtmpUrl(fixedUrl);
+              // startStream is called by the state update re-render — trigger
+              // it imperatively after state settles.
+              setTimeout(() => {
+                setErrorMessage("");
+                setConnectionStatus("connecting");
+                publisherRef.current?.startStream().catch(() => {
+                  setConnectionStatus("failed");
+                  setErrorMessage("Failed to start stream. Check URL and key.");
+                });
+              }, 100);
+            },
+          },
+        ],
+      );
       return;
     }
     setErrorMessage("");
@@ -263,16 +340,19 @@ export default function App(): React.JSX.Element {
         {/* RTMP URL input */}
         <TextInput
           style={[styles.input, isStreaming && styles.inputDisabled]}
-          placeholder="RTMP URL  (rtmp://server/live)"
+          placeholder="Base URL — rtmp://server:port/app"
           placeholderTextColor="#888"
           value={rtmpUrl}
-          onChangeText={setRtmpUrl}
+          onChangeText={handleRtmpUrlChange}
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="url"
           editable={!isStreaming}
-          accessibilityLabel="RTMP URL"
+          accessibilityLabel="RTMP base URL"
         />
+        <Text style={styles.inputHint}>
+          Paste the full URL — stream key will be split out automatically
+        </Text>
 
         {/* Stream key input */}
         <TextInput
@@ -280,7 +360,10 @@ export default function App(): React.JSX.Element {
           placeholder="Stream Key"
           placeholderTextColor="#888"
           value={streamKey}
-          onChangeText={setStreamKey}
+          onChangeText={(v) => {
+            setStreamKey(v);
+            setKeyAutoFilled(false);
+          }}
           autoCapitalize="none"
           autoCorrect={false}
           secureTextEntry
@@ -412,6 +495,12 @@ const styles = StyleSheet.create({
     paddingVertical: Platform.OS === "ios" ? 13 : 10,
     color: "#fff",
     fontSize: 14,
+  },
+  inputHint: {
+    color: "#666",
+    fontSize: 11,
+    marginTop: -6,
+    paddingHorizontal: 2,
   },
   inputDisabled: {
     opacity: 0.45,
